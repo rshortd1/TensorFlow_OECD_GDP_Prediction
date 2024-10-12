@@ -1,0 +1,67 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestRegressor
+import matplotlib.pyplot as plt
+
+# Load the data from the Excel file
+file_path = 'C:/Users/User/Documents/Python/economic indicators analysis OECD/OECD_Economic_Metrics.xlsx'
+data = pd.read_excel(file_path)
+
+# Include the 2023 GDP growth rate as a feature (since we're predicting 2024)
+features = data.drop(columns=['Country'])  # Drop 'Country', keep 'WorldBank GDP Growth Rate 2023' as a feature
+
+# Specify the target column for prediction (this will be hypothetical for 2024)
+# Since we don't have real 2024 data, this is just for training and future predictions.
+target_column = 'WorldBank GDP Growth Rate 2023'  # We use this to train the model for 2024 predictions
+target = data[target_column]
+
+# Handle missing values
+imputer = SimpleImputer(strategy='mean')
+features_imputed = imputer.fit_transform(features)
+
+# Normalize the features
+scaler = StandardScaler()
+features_scaled = scaler.fit_transform(features_imputed)
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(features_scaled, target, test_size=0.2, random_state=42)
+
+# Train a Random Forest model for feature importance and predictions
+rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+
+# Get feature importances from the model
+importances = rf_model.feature_importances_
+
+# Get the corresponding feature names
+feature_names = features.columns
+
+# Sort the feature importances in descending order
+sorted_indices = importances.argsort()[::-1]
+sorted_importances = importances[sorted_indices]
+sorted_feature_names = feature_names[sorted_indices]
+
+# Plot the feature importances
+plt.figure(figsize=(10, 6))
+plt.barh(sorted_feature_names, sorted_importances, color='b')
+plt.xlabel('Feature Importance Score')
+plt.ylabel('Features')
+plt.title('Feature Importance for Predicting GDP Growth Rate 2023 (to Estimate 2024)')
+plt.gca().invert_yaxis()  # Highest score at the top
+plt.show()
+
+# Print the sorted feature importances
+for feature, importance in zip(sorted_feature_names, sorted_importances):
+    print(f'{feature}: {importance:.4f}')
+
+# Predict GDP growth rates for 2024 using the trained model
+all_predictions = rf_model.predict(features_scaled)
+
+# Add the predicted 2024 GDP growth rates as a new column to the original data
+data['Predicted GDP Growth Rate 2024'] = all_predictions
+
+# Display the predictions along with country names
+predicted_data = data[['Country', 'Predicted GDP Growth Rate 2024']]
+print(predicted_data)
